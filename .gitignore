@@ -5,3 +5,5 @@ output*
 pictures*
 failed_crop
 labels.txt
+.DS_Store
+.idea
