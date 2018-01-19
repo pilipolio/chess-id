@@ -10,7 +10,7 @@ from chessid import detection
 
 model = classifier.ImageClassifier.load(
     num_classes=len(classifier.CLASSES),
-    model_path=os.path.join(os.path.dirname(__file__), 'non_lin_model_only_best.pth.tar'))
+    model_path=os.path.join(os.path.dirname(__file__), 'trained_non_lin_model_best.pth.tar'))
 
 
 def image_to_annotated_squares(img):
