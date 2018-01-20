@@ -1,4 +1,4 @@
-runtime: python
+runtime: custom
 env: flex
 entrypoint: gunicorn app:app --log-file=- --pythonpath src,src/chessid -b :$PORT
 
@@ -15,3 +15,6 @@ resources:
   cpu: 1
   memory_gb: 0.5
   disk_size_gb: 10
+
+health_check:
+  enable_health_check: False

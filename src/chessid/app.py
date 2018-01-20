@@ -33,10 +33,11 @@ def upload_form():
     </form>
     '''
 
+
 if __name__ == '__main__':
     import sys
     if len(sys.argv) == 1:
-        app.run(host='0.0.0.0', debug=False)
+        app.run()
     else:
         with open(sys.argv[1], 'rb') as file:
             img = np.asarray(bytearray(file.read()))
