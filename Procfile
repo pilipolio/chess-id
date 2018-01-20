@@ -1,1 +1,0 @@
-web: gunicorn app:app --log-file=- --pythonpath src,src/chessid

@@ -8,4 +8,6 @@ ADD ./*requirements.txt /app/
 RUN pip install -r requirements.txt
 ADD . /app
 
-ENTRYPOINT ["gunicorn", "-b", ":8080", "app:app", "--pythonpath", "src,src/chessid", "--capture-output"]
+EXPOSE 8889
+
+ENTRYPOINT ["gunicorn", "-b", ":8080", "app:app", "--pythonpath", "src,src/chessid", "--capture-output", "--workers", "1"]

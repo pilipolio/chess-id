@@ -37,13 +37,13 @@ class ImageClassifier(nn.Module):
         return self.classifier(flattened_features)
 
     @classmethod
-    def create(cls, num_classes):
-        model = models.alexnet(pretrained=True)
+    def create(cls, num_classes, alexnet_pretrained=True):
+        model = models.alexnet(pretrained=alexnet_pretrained)
         return cls(num_classes, model)
 
     @classmethod
     def load(cls, num_classes, model_path):
-        model = cls.create(num_classes)
+        model = cls.create(num_classes, alexnet_pretrained=False)
         model.load_state_dict(torch.load(model_path))
         return model
 

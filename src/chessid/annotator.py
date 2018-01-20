@@ -13,20 +13,25 @@ model = None
 
 
 def load_model():
+    global model
+    if model is not None:
+        print('model exists')
+        return
+
     if not os.path.exists(model_path):
+        print('loading model from gc storage')
         from google.cloud import storage
         client = storage.Client()
         bucket = client.get_bucket('chess-id.appspot.com')
         blob = bucket.get_blob(model_name)
         blob.download_to_filename(model_path)
+        print(f'{model_path} downloaded')
 
-    global model
+    print('model.load')
+
     model = classifier.ImageClassifier.load(
         num_classes=len(classifier.CLASSES),
         model_path=model_path)
-
-
-load_model()
 
 
 def image_to_annotated_squares(img):

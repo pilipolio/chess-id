@@ -13,7 +13,11 @@ app = Flask(__name__)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
+    print('upload')
     file = request.files['file']
+    annotator.load_model()
+    print('done')
+
     annotated_image = annotator.image_to_annotated_squares(img=np.asarray(bytearray(file.read())))
     byte_io = BytesIO()
     annotated_image.save(byte_io, 'PNG')
@@ -32,6 +36,11 @@ def upload_form():
          <input type=submit value=Upload>
     </form>
     '''
+
+
+@app.route('/_ah/health', methods=['GET'])
+def health():
+    return '', 200
 
 
 if __name__ == '__main__':
