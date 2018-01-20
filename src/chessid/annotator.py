@@ -8,15 +8,14 @@ from chessid import classifier
 from chessid import detection
 
 
-model = classifier.ImageClassifier.load(
-    num_classes=len(classifier.CLASSES),
-    model_path=os.path.join(os.path.dirname(__file__), 'trained_non_lin_model_best.pth.tar'))
-
-
 def image_to_annotated_squares(img):
     board = detection.find_board(img)
     squares = detection.split_board(board)
     square_size = squares[0].shape[0]
+
+    model = classifier.ImageClassifier.load(
+        num_classes=len(classifier.CLASSES),
+        model_path=os.path.join(os.path.dirname(__file__), 'trained_non_lin_model_best.pth.tar'))
 
     annotated_board = Image.new('RGBA', (square_size * 8, square_size  * 8))
 
