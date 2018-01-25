@@ -10,4 +10,4 @@ ADD . /app
 
 EXPOSE 8889
 
-ENTRYPOINT ["gunicorn", "-b", ":8080", "app:app", "--pythonpath", "src,src/chessid", "--capture-output", "--workers", "1"]
+ENTRYPOINT ["gunicorn", "-b", ":8080", "app:app", "--pythonpath", "src,src/chessid", "--capture-output", "--workers", "1", "--preload"]

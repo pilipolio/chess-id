@@ -128,15 +128,16 @@ def find_board(fname):
 
     # Canny edge detection
     edges = auto_canny(gray)
+    edges = cv2.Canny(img, threshold1=100, threshold2=300)
     if np.count_nonzero(edges) / float(gray.shape[0] * gray.shape[1]) > 0.015:
         print('too many edges')
-        return None
+        return edges
 
     # Hough line detection
     lines = cv2.HoughLines(edges, 1, np.pi / 180, 200)
     if lines is None:
         print('no lines')
-        return None
+        return edges
 
     lines = np.reshape(lines, (-1, 2))
 

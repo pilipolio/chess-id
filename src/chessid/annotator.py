@@ -34,8 +34,16 @@ def load_model():
         model_path=model_path)
 
 
+load_model()
+
+
 def image_to_annotated_squares(img):
     board = detection.find_board(img)
+    print(board.shape)
+    if board.shape[0] != board.shape[1]:
+        return Image.fromarray(board)
+
+
     squares = detection.split_board(board)
     square_size = squares[0].shape[0]
 
