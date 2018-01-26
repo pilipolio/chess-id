@@ -1,4 +1,6 @@
 .ipynb_checkpoints
+.idea
+__pycache__
 caffe*
 crops*
 output*

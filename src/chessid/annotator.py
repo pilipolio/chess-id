@@ -7,8 +7,9 @@ from PIL import ImageDraw
 from chessid import classifier
 from chessid import detection
 
-model_name = 'trained_non_lin_model_best.pth.tar'
-model_path = os.path.join(os.path.dirname(__file__), model_name)
+APP_ENGINE_NAME = 'chess-id.appspot.com'
+DEFAULT_MODEL_NAME = 'trained_non_lin_model_best.pth.tar'
+
 model = None
 
 
@@ -18,16 +19,18 @@ def load_model():
         print('model exists')
         return
 
-    if not os.path.exists(model_path):
+    if 'MODEL_PATH' in os.environ and os.path.exists(os.environ.get('MODEL_PATH')):
+        model_path = os.environ.get('MODEL_PATH')
+        print(f'Using model found at {model_path}')
+    else:
         print('loading model from gc storage')
         from google.cloud import storage
         client = storage.Client()
-        bucket = client.get_bucket('chess-id.appspot.com')
-        blob = bucket.get_blob(model_name)
-        blob.download_to_filename(model_path)
+        bucket = client.get_bucket(APP_ENGINE_NAME)
+        blob = bucket.get_blob(DEFAULT_MODEL_NAME)
+        model_path = DEFAULT_MODEL_NAME
+        blob.download_to_filename(DEFAULT_MODEL_NAME)
         print(f'{model_path} downloaded')
-
-    print('model.load')
 
     model = classifier.ImageClassifier.load(
         num_classes=len(classifier.CLASSES),

@@ -1,15 +1,47 @@
 # Chess ID
 
-What this repo is meant for: if you would to build your own chesspiece identification models, or if you want to deploy a Chess ID server.
-
+This is a fork of https://github.com/daylen/chess-id, a chess board & pieces recognition from bird's eye photo, with support for:
+ * Pytorch instead of Caffe
+ * Full instructions and requirements to run your own server locally (Docker or your Python3 of choice), or on Google cloud (see https://chess-id.appspot.com/upload)
+ 
 ## Experiment with your own models
 
 First, grab the data: https://www.dropbox.com/s/618l4ddoykotmru/Chess%20ID%20Public%20Data.zip?dl=0
 
-My experiments are available in the Jupyter notebook.
+Experiments are available in the Jupyter notebook.
 
-## Deploy the Chess ID server
+## Download pre-trained model
 
-First, grab the Caffe model: https://www.dropbox.com/s/fmlt5ook8ugovid/finetune_chess_iter_5554.caffemodel?dl=0
+you can download this pre-trained (far from perfect) model
 
-Install all dependencies (Caffe, OpenCV, etc.). Edit paths in server.py and then run it.
+```
+$ wget https://storage.googleapis.com/chess-id.appspot.com/trained_non_lin_model_best.pth.tar
+```
+
+## Deploy the Chess ID server locally
+
+```
+$ pip install -r local-requirements.txt
+$ PYTHONPATH=src MODEL_PATH=trained_non_lin_model_best.pth.tar src python src/chessid/app.py
+```
+
+or with docker
+
+```
+docker build -t chess-id .; docker run -e MODEL_PATH=trained_non_lin_model_best.pth.tar chess-id
+```
+
+## Deploy the Chess ID server on Google App Engine
+
+The server is deployed on [Google flexible app engine](https://cloud.google.com/appengine/docs/flexible), see https://chess-id.appspot.com/upload.
+The environment is defined in the `app.yaml` and the `Dockerfile` and can be deployed by doing:
+
+```
+$ gcloud app deploy
+```
+
+and then logs can be remotely inspected with:
+
+```
+$ gcloud app logs tail
+```
