@@ -1,0 +1,31 @@
+<script src="{{url_for('static', filename='jquery-3.2.1.min.js')}}"></script>
+<script src="{{url_for('static', filename='annotate.js')}}"></script>
+<html>
+  <head>
+      <style>
+          #grid-source { position: absolute; }
+          #grid-overlay { position: relative; }
+          .hover { background-color: rgba(0,0,0,0.1) !important; }
+          .unselected { background-color: rgba(0,0,0,0.5); }
+          .selected { background-color: none; }
+
+          table.no-spacing {
+          border-spacing:0; /* Removes the cell spacing via CSS */
+          border-collapse: collapse;  /* Optional - if you don't want to have double border where cells touch */
+          }
+      </style>
+      <script>
+        var grid = {{ grid|tojson|safe }};
+        var imageId = "{{ image_id }}";
+
+        window.onload = addOverlay
+      </script>
+  </head>
+  <body>
+    <div id="grid-source">
+      <img src="{{ annotated_path }}" />
+    </div>
+    <a id="export" href="javascript:exportPieces(imageId);">export pieces</a>
+  </body>
+
+</html>

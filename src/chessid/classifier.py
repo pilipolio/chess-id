@@ -1,5 +1,3 @@
-import cv2
-from PIL import Image
 import torch
 from torch.autograd import Variable
 from torch import nn
@@ -20,9 +18,6 @@ class ImageClassifier(nn.Module):
         for p in self.feature_model.parameters():
             p.requires_grad = False
 
-        #self.classifier = nn.Sequential(
-        #    nn.Linear(self.LAST_LAYER_SIZE, num_classes)
-        #)
         self.classifier = nn.Sequential(
             nn.Dropout(),
             nn.Linear(self.LAST_LAYER_SIZE, 1024),
@@ -59,10 +54,4 @@ pil_image_to_tensor = transforms.Compose([
     _normalize,
     lambda i: Variable(i.unsqueeze(0))
 ])
-
-
-def cv_to_pil(image_array):
-    image_array = cv2.cvtColor(image_array, cv2.COLOR_BGR2RGB)
-    return Image.fromarray(image_array)
-
 

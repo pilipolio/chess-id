@@ -6,7 +6,6 @@ import time
 import torch
 import torch.nn as nn
 import torch.nn.parallel
-import torch.backends.cudnn as cudnn
 import torch.distributed as dist
 import torch.optim
 import torch.utils.data
@@ -75,69 +74,16 @@ def main():
     # create model
     if args.pretrained:
         print("=> using pre-trained model '{}'".format(args.arch))
-        model = models.__dict__[args.arch](pretrained=True)
 
         from torch import nn
+        from chessid.classifier import ImageClassifier
 
-        class ImageClassifier(nn.Module):
-            LAST_LAYER_SIZE = 256 * 7 * 7
-
-            def __init__(self, num_classes, alexnet_model):
-                super(ImageClassifier, self).__init__()
-                self.feature_model = alexnet_model.features
-                # Freeze those weights
-                for p in self.feature_model.parameters():
-                    p.requires_grad = False
-
-                self.classifier = nn.Sequential(
-                    nn.Linear(self.LAST_LAYER_SIZE, num_classes)
-                )
-
-            def forward(self, x):
-                features = self.feature_model(x)
-                flattened_features = features.view(features.size(0), -1)
-                return self.classifier(flattened_features)
-
-        class ImageClassifier(nn.Module):
-            LAST_LAYER_SIZE = 256 * 7 * 7
-
-            def __init__(self, num_classes, alexnet_model):
-                super(ImageClassifier, self).__init__()
-                self.feature_model = alexnet_model.features
-                # Freeze those weights
-                for p in self.feature_model.parameters():
-                    p.requires_grad = False
-
-                self.classifier = nn.Sequential(
-                    nn.Dropout(),
-                    nn.Linear(self.LAST_LAYER_SIZE, 1024),
-                    nn.ReLU(inplace=True),
-                    nn.Dropout(),
-                    nn.Linear(1024, num_classes),
-                )
-
-            def forward(self, x):
-                features = self.feature_model(x)
-                flattened_features = features.view(features.size(0), -1)
-                return self.classifier(flattened_features)
-
-        model = ImageClassifier(num_classes=13, alexnet_model=model)
+        model = ImageClassifier.create(num_classes=13)
 
     else:
         print("=> creating model '{}'".format(args.arch))
-        model = models.__dict__[args.arch]()
+        #model = models.__dict__[args.arch]()ImageClassifier.create(num_classes=13)
 
-    # if not args.distributed:
-    #     if args.arch.startswith('alexnet') or args.arch.startswith('vgg'):
-    #         model.features = torch.nn.DataParallel(model.features)
-    #         model.cuda()
-    #     else:
-    #         model = torch.nn.DataParallel(model).cuda()
-    # else:
-    #     model.cuda()
-    #     model = torch.nn.parallel.DistributedDataParallel(model)
-
-    # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss()  # .cuda()
 
     optimizer = torch.optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), args.lr,
@@ -149,12 +95,17 @@ def main():
         if os.path.isfile(args.resume):
             print("=> loading checkpoint '{}'".format(args.resume))
             checkpoint = torch.load(args.resume)
-            args.start_epoch = checkpoint['epoch']
-            best_prec1 = checkpoint['best_prec1']
-            model.load_state_dict(checkpoint['state_dict'])
-            optimizer.load_state_dict(checkpoint['optimizer'])
-            print("=> loaded checkpoint '{}' (epoch {})"
-                  .format(args.resume, checkpoint['epoch']))
+            try:
+                args.start_epoch = checkpoint['epoch']
+                best_prec1 = checkpoint['best_prec1']
+                optimizer.load_state_dict(checkpoint['optimizer'])
+                model.load_state_dict(checkpoint['state_dict'])
+                print("=> loaded checkpoint '{}' (epoch {})"
+                      .format(args.resume, checkpoint['epoch']))
+            except:
+                print("=> loaded model '{}' (epoch 0)".format(args.resume))
+                model.load_state_dict(torch.load(args.resume))
+
         else:
             print("=> no checkpoint found at '{}'".format(args.resume))
 
@@ -314,6 +265,7 @@ def validate(val_loader, model, criterion):
 
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
     torch.save(state, filename)
+    torch.save(state['state_dict'], 'trained_non_lin_model_2.pth.tar')
     if is_best:
         shutil.copyfile(filename, 'model_best.pth.tar')
 

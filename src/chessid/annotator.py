@@ -1,11 +1,11 @@
 import os
 
-from PIL import Image
+from PIL.Image import Image
 from PIL import ImageFont
 from PIL import ImageDraw
+import numpy as np
 
 from chessid import classifier
-from chessid import detection
 
 APP_ENGINE_NAME = 'chess-id.appspot.com'
 DEFAULT_MODEL_NAME = 'trained_non_lin_model_best.pth.tar'
@@ -40,34 +40,35 @@ def load_model():
 load_model()
 
 
-def image_to_annotated_squares(img):
-    board = detection.find_board(img)
-    print(board.shape)
-    if board.shape[0] != board.shape[1]:
-        return Image.fromarray(board)
+from typing import NamedTuple, List
+
+Annotations = NamedTuple('Annotations', [
+    ('squares', List[Image]),
+    ('grid', List[List[str]])
+])
 
 
-    squares = detection.split_board(board)
-    square_size = squares[0].shape[0]
+def annotated_squares(squares_images: List[Image]) -> Annotations:
 
-    annotated_board = Image.new('RGBA', (square_size * 8, square_size  * 8))
+    grid = np.empty(shape=(8, 8, 13), dtype="<U10")
 
-    for i, square in enumerate(squares):
-        image = classifier.cv_to_pil(square)
-        image_tensor = classifier.pil_image_to_tensor(image)
+    for i, square_image in enumerate(squares_images):
+        row_index, col_index  = int(i / 8), int(i % 8)
+
+        image_tensor = classifier.pil_image_to_tensor(square_image)
         print(image_tensor.shape)
         pred = model(image_tensor)
-        print(pred)
 
-        top_index = int(pred.topk(1)[1].data[0][0])
-        label = classifier.CLASSES[top_index]
-        print(label)
+        ordered_indexes = pred.topk(13)[1].data.numpy().flatten()
+        ordered_labels = np.asarray(classifier.CLASSES)[ordered_indexes]
 
-        draw_label(image , label)
-        offset = int(i % 8) * square_size, int(i / 8) * square_size
-        annotated_board.paste(image , offset)
+        print(ordered_labels[0])
+        grid[row_index, col_index] = ordered_labels
 
-    return annotated_board
+    return Annotations(
+        squares=squares_images,
+        grid=grid
+    )
 
 
 def draw_label(pil_img, text):
