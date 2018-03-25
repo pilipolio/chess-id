@@ -30,7 +30,7 @@ $ PYTHONPATH=src python  src/chessid/train.py --pretrained -a alexnet --lr 0.01 
 
 ```
 $ pip install -r local-requirements.txt
-$ PYTHONPATH=src MODEL_PATH=trained_non_lin_model_best.pth.tar src python src/chessid/app.py
+$ MODEL_PATH=~/Data/trained_non_lin_model_best.pth.tar PYTHONPATH=src python src/chessid/app.py
 ```
 
 or with docker

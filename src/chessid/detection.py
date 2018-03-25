@@ -98,6 +98,9 @@ def perspective_transform(board_corner_points, grid_points, output_square_width=
 
 
 def find_corners2(h_lines: List[Line], v_lines: List[Line], points: List[Point], topn=5) -> List[Point]:
+    """
+    Given a list of points, returns a list containing the four corner points.
+    """
 
     def only_inside_points(output_points, output_square_size, epsilon=10):
         inside_mask = np.logical_and(
@@ -118,11 +121,8 @@ def find_corners2(h_lines: List[Line], v_lines: List[Line], points: List[Point],
     def mixed_distance(candidate_corner_points, all_points, output_square_size=100):
         output_points = perspective_transform(candidate_corner_points, all_points, output_square_size)
         inside_points = only_inside_points(output_points, output_square_size)
-
         distances = closest_points_to_ideal_distances(inside_points, output_square_size)
-        n_points = inside_points.shape[0]
-
-        return np.mean(distances.min(axis=1)) + np.median(distances.min(axis=0)) + .1 * (n_points - 81) * (n_points - 81)
+        return np.mean(distances.min(axis=0))
 
     def sort_v_lines_left_to_right(v_lines: List[Line]) -> List[Line]:
         v_lines = np.asarray(v_lines)
@@ -167,38 +167,10 @@ def find_corners2(h_lines: List[Line], v_lines: List[Line], points: List[Point],
 
         if c <= best_criterium:
             best_criterium = c
-
-        best_corners = possible_corners
+            best_corners = possible_corners
 
     print('best_criterium', best_criterium)
     return best_corners
-
-
-def find_corners(points: List[Point], img_dim) -> List[Point]:
-    """
-    Given a list of points, returns a list containing the four corner points.
-    """
-    center_point = closest_point(points, (img_dim[0] / 2, img_dim[1] / 2))
-    points.remove(center_point)
-    center_adjacent_point = closest_point(points, center_point)
-    points.append(center_point)
-    grid_dist = spatial.distance.euclidean(np.array(center_point), np.array(center_adjacent_point))
-
-    img_corners = [(0, 0), (0, img_dim[1]), img_dim, (img_dim[0], 0)]
-    board_corners = []
-    tolerance = 0.25  # bigger = more tolerance
-    for img_corner in img_corners:
-        while True:
-            cand_board_corner = closest_point(points, img_corner)
-            points.remove(cand_board_corner)
-            cand_board_corner_adjacent = closest_point(points, cand_board_corner)
-            corner_grid_dist = spatial.distance.euclidean(np.array(cand_board_corner),
-                                                          np.array(cand_board_corner_adjacent))
-            if corner_grid_dist > (1 - tolerance) * grid_dist and corner_grid_dist < (1 + tolerance) * grid_dist:
-                points.append(cand_board_corner)
-                board_corners.append(cand_board_corner)
-                break
-    return board_corners
 
 
 def four_point_transform(img, points: List[Point], square_length=1816):
