@@ -18,6 +18,14 @@ you can download this pre-trained (far from perfect) model
 $ wget https://storage.googleapis.com/chess-id.appspot.com/trained_non_lin_model_best.pth.tar
 ```
 
+## Fine tune model
+
+
+```
+$ PYTHONPATH=src python  src/chessid/train.py --pretrained -a alexnet --lr 0.01 --batch-size 64 --epochs 3 data/squares --resume trained_non_lin_model_best.pth.tar
+```
+
+
 ## Deploy the Chess ID server locally
 
 ```
@@ -28,7 +36,7 @@ $ PYTHONPATH=src MODEL_PATH=trained_non_lin_model_best.pth.tar src python src/ch
 or with docker
 
 ```
-docker build -t chess-id .; docker run -e MODEL_PATH=trained_non_lin_model_best.pth.tar chess-id
+docker build -t chess-id .; docker run -e MODEL_PATH=trained_non_lin_model_best.pth.tar chess-id -e GOOGLE_APPLICATION_CREDENTIALS="LINK_TO_GCP_JSONchess-id-c567f2e698cd.json"
 ```
 
 ## Deploy the Chess ID server on Google App Engine

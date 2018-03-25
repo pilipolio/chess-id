@@ -1,11 +1,17 @@
 <html>
-  <head>
-      <style>
-      </style>
-      <script>
-      </script>
-  </head>
-  <body>
-    <img src="{{ debug_image_path }}" />
-  </body>
+<body>
+<title>Chess ID</title>
+    <h1>Upload board picture</h1>
+    <form action="upload" method=post enctype=multipart/form-data>
+    <p>
+        <input type=file name=file>
+        <input type=submit value=Upload>
+    </form>
+    <h1>Debug board picture</h1>
+    <form action="debug" method=post enctype=multipart/form-data>
+    <p>
+        <input type=file name=file>
+        <input type=submit value=Debug>
+    </form>
+</body>
 </html>

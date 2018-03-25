@@ -28,6 +28,7 @@ def auto_canny(image, sigma=0.33):
     return edged
 
 
+Point = NamedTuple('Point', [('x', float), ('y', float)])
 Line = NamedTuple('Line', [('rho', float), ('theta', float)])
 
 
@@ -46,7 +47,7 @@ def hor_vert_lines(lines: List[Line]) -> Tuple[List[Line], List[Line]]:
     return h, v
 
 
-def intersections(h: List[Line], v: List[Line]):
+def intersections(h: List[Line], v: List[Line]) -> List[Point]:
     """
     Given lists of lines in (rho, theta) form, returns list of (x, y) intersection points.
     """
@@ -55,12 +56,12 @@ def intersections(h: List[Line], v: List[Line]):
         for d2, a2 in v:
             A = np.array([[np.cos(a1), np.sin(a1)], [np.cos(a2), np.sin(a2)]])
             b = np.array([d1, d2])
-            point = np.linalg.solve(A, b)
+            point = np.linalg.solve(A, b).tolist()
             points.append(point)
-    return np.array(points)
+    return points
 
 
-def cluster(points, max_dist=50):
+def cluster(points: List[Point], max_dist=50):
     """
     Given a list of points, returns a list of cluster centers.
     """
@@ -75,7 +76,7 @@ def cluster(points, max_dist=50):
     return clusters
 
 
-def closest_point(points, loc):
+def closest_point(points: List[Point], loc) -> List[Point]:
     """
     Returns the list of points, sorted by distance from loc.
     """
@@ -83,7 +84,97 @@ def closest_point(points, loc):
     return points[dists.argmin()]
 
 
-def find_corners(points, img_dim):
+def perspective_transform(board_corner_points, grid_points, output_square_width=100):
+    # order has to be bottom left, top left, top right, bottom right to match output_points
+    board_corner_points = np.asarray(board_corner_points, dtype=np.float32)
+    grid_points = np.asarray(grid_points, dtype=np.float32)
+
+    output_points = np.array([
+        [0, 0], [0, 8 * output_square_width], [8 * output_square_width, 8 * output_square_width],
+        [8 * output_square_width, 0]], dtype=np.float32)
+    transform_matrix = cv2.getPerspectiveTransform(board_corner_points, output_points)
+    # opencv quirk https://stackoverflow.com/questions/27585355/python-open-cv-perspectivetransform
+    return cv2.perspectiveTransform(grid_points[None, :, :], transform_matrix).squeeze()
+
+
+def find_corners2(h_lines: List[Line], v_lines: List[Line], points: List[Point], topn=5) -> List[Point]:
+
+    def only_inside_points(output_points, output_square_size, epsilon=10):
+        inside_mask = np.logical_and(
+            output_points >= -epsilon,
+            output_points <= (8 * output_square_size + epsilon)
+        ).all(axis=1)
+        return output_points[inside_mask, :]
+
+    def ideal_output_points(output_square_size):
+        grid = np.linspace(start=0, stop=output_square_size * 8, num=8 + 1)
+        return [(x, y) for x in grid for y in grid]
+
+    def closest_points_to_ideal_distances(points, output_square_size):
+        ideal_points = ideal_output_points(output_square_size)
+        real_to_ideal_distances = spatial.distance.cdist(points, ideal_points, 'euclidean')
+        return real_to_ideal_distances
+
+    def mixed_distance(candidate_corner_points, all_points, output_square_size=100):
+        output_points = perspective_transform(candidate_corner_points, all_points, output_square_size)
+        inside_points = only_inside_points(output_points, output_square_size)
+
+        distances = closest_points_to_ideal_distances(inside_points, output_square_size)
+        n_points = inside_points.shape[0]
+
+        return np.mean(distances.min(axis=1)) + np.median(distances.min(axis=0)) + .1 * (n_points - 81) * (n_points - 81)
+
+    def sort_v_lines_left_to_right(v_lines: List[Line]) -> List[Line]:
+        v_lines = np.asarray(v_lines)
+        x_axis_line = Line(rho=0, theta=np.pi / 2)
+        with_axis_intersections = intersections(v_lines, [x_axis_line])
+        left_to_right_indexes = np.argsort(np.array(with_axis_intersections)[:, 0])
+        return v_lines[left_to_right_indexes].tolist()
+
+    def sort_h_lines_bottom_to_top(h_lines: List[Line]) -> List[Line]:
+        h_lines = np.asarray(h_lines)
+        order_by_rho = np.argsort(h_lines[:, 0])
+        return h_lines[order_by_rho, :].tolist()
+
+    def corner_intersections(bottom_line, top_line, left_line, right_line) -> List[Point]:
+        bottom_left, bottom_right, top_left, top_right = intersections(
+            [bottom_line, top_line], [left_line, right_line])
+        # order to match expected order for perspective transform
+        return [bottom_left, top_left, top_right, bottom_right]
+
+    print('points:', len(points))
+
+    selected_h_lines = sort_h_lines_bottom_to_top(cluster(h_lines, max_dist=20))
+    selected_v_lines = sort_v_lines_left_to_right(cluster(v_lines, max_dist=20))
+    print('h_lines:', len(h_lines), '->', len(selected_h_lines))
+    print('v_lines:', len(v_lines), '->', len(selected_v_lines))
+
+    from itertools import product
+    borders_candidates = list(product(
+        selected_h_lines[:topn],
+        selected_h_lines[-topn:],
+        selected_v_lines[:topn],
+        selected_v_lines[-topn:]))
+
+    print('borders_candidates', len(borders_candidates))
+
+    best_criterium = np.infty
+    best_corners = None
+
+    for borders in borders_candidates:
+        possible_corners = corner_intersections(*borders)
+        c = mixed_distance(possible_corners, points)
+
+        if c <= best_criterium:
+            best_criterium = c
+
+        best_corners = possible_corners
+
+    print('best_criterium', best_criterium)
+    return best_corners
+
+
+def find_corners(points: List[Point], img_dim) -> List[Point]:
     """
     Given a list of points, returns a list containing the four corner points.
     """
@@ -110,7 +201,8 @@ def find_corners(points, img_dim):
     return board_corners
 
 
-def four_point_transform(img, points, square_length=1816):
+def four_point_transform(img, points: List[Point], square_length=1816):
+    # pts1 order has to match pts2! bottom left, top left, top right, bottom right
     pts1 = np.float32(points)
     pts2 = np.float32([[0, 0], [0, square_length], [square_length, square_length], [square_length, 0]])
     M = cv2.getPerspectiveTransform(pts1, pts2)
@@ -139,9 +231,9 @@ def draw_lines(img: np.array, lines: List[Line]) -> np.array:
     return img
 
 
-def draw_points(img: np.array, points: np.array) -> np.array:
+def draw_points(img: np.array, points: List[Point], color=(0, 0, 255)) -> np.array:
     for point in points:
-        cv2.circle(img, center=tuple(point), radius=25, color=(0, 0, 255), thickness=-1)
+        cv2.circle(img, center=(int(point[0]), int(point[1])), radius=25, color=color, thickness=-1)
     return img
 
 
@@ -152,16 +244,20 @@ def cv_to_pil(image_array: np.array, ratio=1, size=None) -> Image:
     return image.resize(size or (ratio * np.array(image.size)).astype(int), resample=BICUBIC)
 
 
-DetectionResult = NamedTuple('DetectionResult', [
-    ('debug', Image),
-    ('board', Image),
-    ('squares', List[Image]),
-])
+class Result(NamedTuple):
+    debug: Image
+    board: Image
+    squares: List[Image]
+    all_points: List[Point] = []
+    corner_points: List[Point] = []
+    h_lines: List[Line] = []
+    v_lines: List[Line] = []
+
 
 MAX_EDGE_PIXEL_RATIO = .03
 
 
-def find_board(buffer) -> DetectionResult:
+def find_board(buffer) -> Result:
     img = cv2.imdecode(buffer, 1)
     print(img.shape)
 
@@ -174,28 +270,32 @@ def find_board(buffer) -> DetectionResult:
     print(edge_pixels_ratio)
     if edge_pixels_ratio > MAX_EDGE_PIXEL_RATIO:
         print('too many edges')
-        return DetectionResult(cv_to_pil(edges_image, ratio=.5), None, None)
+        return Result(cv_to_pil(edges_image, ratio=.5), None, None)
 
     h_lines, v_lines = detect_lines(edges_image)
     edges_image = draw_lines(cv2.cvtColor(edges_image, cv2.COLOR_GRAY2BGR), h_lines + v_lines)
 
     if len(h_lines) < 9 or len(v_lines) < 9:
         print('too few lines')
-        return DetectionResult(cv_to_pil(edges_image, ratio=.5), None, None)
+        return Result(cv_to_pil(edges_image, ratio=.5), None, None)
 
     points = intersections(h_lines, v_lines)
 
     points = cluster(points)
     edges_image = draw_points(edges_image, points)
 
-    # Find corners
-    img_shape = np.shape(img)
-    points = find_corners(points, (img_shape[1], img_shape[0]))
+    corners = find_corners2(h_lines, v_lines, points)
 
-    # Perspective transform
-    new_img = four_point_transform(img, points)
+    #corners = find_corners(points, (img.shape[1], img.shape[0]))
+    edges_image = draw_points(edges_image, corners, color=(255, 0, 0))
 
-    return DetectionResult(
+    new_img = four_point_transform(img, corners)
+
+    return Result(
+        corner_points=corners,
+        all_points=points,
+        h_lines=h_lines,
+        v_lines=v_lines,
         debug=cv_to_pil(edges_image, ratio=.5),
         board=cv_to_pil(new_img, size=(80 * 8, 80 * 8)),
         squares=split_board(new_img))

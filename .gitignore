@@ -9,3 +9,5 @@ failed_crop
 labels.txt
 .DS_Store
 .idea
+src/chessid/static/*png
+data/*

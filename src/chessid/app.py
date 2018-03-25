@@ -1,5 +1,4 @@
 import datetime as dt
-import json
 import os
 from pathlib import Path
 import shutil
@@ -7,6 +6,7 @@ import shutil
 from flask import Flask, request, render_template, url_for
 import numpy as np
 
+from chessid import detection
 from chessid import annotator
 from chessid import classifier
 
@@ -32,23 +32,32 @@ def square_image_path(image_id, index) -> Path:
     return module_directory.joinpath('static', 'squares', f'{image_id}_{index}.png')
 
 
+@app.route('/debug', methods=['POST'])
+def debug():
+    image_id = f'{dt.datetime.now():%Y%m%d%H%M%s}'
+    file = request.files['file']
+    detection_result = detection.find_board(np.asarray(bytearray(file.read())))
+    return debug_page(image_id, detection_result)
+
+
+def debug_page(image_id, detection_result: detection.Result):
+    static_relative_path = Path('edges') / Path(f'{image_id}.png')
+    with (module_directory.joinpath('static') / static_relative_path).open(mode='wb') as f:
+        detection_result.debug.save(f, 'PNG')
+    return render_template(
+        'debug.html',
+        debug_image_path=url_for('static', filename=static_relative_path),
+    )
+
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     image_id = f'{dt.datetime.now():%Y%m%d%H%M%s}'
     file = request.files['file']
-    from chessid import detection
     detection_result = detection.find_board(np.asarray(bytearray(file.read())))
 
     if detection_result.board is None:
-        static_relative_path = Path('edges') / Path(f'{image_id}.png')
-        with (module_directory.joinpath('static') / static_relative_path).open(mode='wb') as f:
-            detection_result.debug.save(f, 'PNG')
-
-        print('return debug')
-        return render_template(
-            'debug.html',
-            debug_image_path=url_for('static', filename=static_relative_path),
-        )
+        return debug_page(image_id, detection_result)
 
     annotation = annotator.annotated_squares(detection_result.squares)
 
@@ -70,15 +79,7 @@ def upload_file():
 
 @app.route('/upload', methods=['GET'])
 def upload_form():
-    return '''
-    <!doctype html>
-    <title>Chess ID</title>
-    <h1>Upload board picture</h1>
-    <form action="" method=post enctype=multipart/form-data>
-      <p><input type=file name=file>
-         <input type=submit value=Upload>
-    </form>
-    '''
+    return render_template('upload.html')
 
 
 @app.route('/annotations/<image_id>', methods=['POST'])
@@ -103,4 +104,4 @@ def health():
 
 
 if __name__ == '__main__':
-    app.run(port=5001)
+    app.run()
