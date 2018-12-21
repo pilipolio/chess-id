@@ -14,3 +14,9 @@ resources:
 
 health_check:
   enable_health_check: False
+
+skip_files:
+- data/
+- notebooks/
+- ^(.*/)?.*\.tar$
+- ^(.*/)?.*\.jpg$

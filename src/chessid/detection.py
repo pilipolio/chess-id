@@ -183,10 +183,13 @@ def four_point_transform(img, points: List[Point], square_length=1816):
 
 def detect_lines(edges_image: np.array) -> Tuple[List[Line], List[Line]]:
     # Hough line detection
-    lines = cv2.HoughLines(edges_image, 1, np.pi / 180, 200)
+    lines = cv2.HoughLines(edges_image, 1, np.pi / 180, threshold=300)
     lines = np.reshape(lines, (-1, 2))
     h, v = hor_vert_lines(lines)
-    return h, v
+
+    print(edges_image.shape)
+    side_image_lines = [Line(rho=1, theta=0), Line(rho=edges_image.shape[1], theta=0)]
+    return h, v + side_image_lines
 
 
 def draw_lines(img: np.array, lines: List[Line]) -> np.array:
@@ -253,7 +256,7 @@ def find_board(buffer) -> Result:
 
     points = intersections(h_lines, v_lines)
 
-    points = cluster(points)
+    points = cluster(points, max_dist=50)
     edges_image = draw_points(edges_image, points)
 
     corners = find_corners2(h_lines, v_lines, points)

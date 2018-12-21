@@ -39,7 +39,10 @@ class ImageClassifier(nn.Module):
     @classmethod
     def load(cls, num_classes, model_path):
         model = cls.create(num_classes, alexnet_pretrained=False)
-        model.load_state_dict(torch.load(model_path))
+        state = torch.load(model_path)
+        if 'state_dict' in state:
+            state = state['state_dict']
+        model.load_state_dict(state)
         return model
 
 

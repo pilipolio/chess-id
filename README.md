@@ -1,8 +1,10 @@
 # Chess ID
 
-This is a fork of https://github.com/daylen/chess-id, a chess board & pieces recognition from bird's eye photo, with support for:
+This is a fork of [chess-id](https://github.com/daylen/chess-id), a chess board & pieces recognition server from bird's eye photo, with support for:
  * Pytorch instead of Caffe
  * Full instructions and requirements to run your own server locally (Docker or your Python3 of choice), or on Google cloud (see https://chess-id.appspot.com/upload)
+ 
+ See https://medium.com/@daylenyang/building-chess-id-99afa57326cd for the original blog post
  
 ## Experiment with your own models
 
@@ -52,4 +54,9 @@ and then logs can be remotely inspected with:
 
 ```
 $ gcloud app logs tail
+```
+
+```
+gcloud app versions list
+gcloud app versions stop 
 ```

@@ -265,7 +265,6 @@ def validate(val_loader, model, criterion):
 
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
     torch.save(state, filename)
-    torch.save(state['state_dict'], 'trained_non_lin_model_2.pth.tar')
     if is_best:
         shutil.copyfile(filename, 'model_best.pth.tar')
 
